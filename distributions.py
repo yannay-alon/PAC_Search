@@ -1,6 +1,42 @@
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from scipy import stats
+from typing import Optional
+
+supported_distribution_types = {"beta": stats.beta, "gamma": stats.gamma, "norm": stats.norm, "uniform": stats.uniform}
+
+
+class Distribution:
+    def __init__(self, data: np.ndarray, distribution_type: Optional[str] = None, bounds: tuple[tuple[int]] = None):
+        self.data = data
+        self.dist = None
+        if distribution_type is not None:
+            try:
+                self.dist = supported_distribution_types[distribution_type]
+            except KeyError:
+                print("Distribution type not supported. Using unparametric empirical cdf.")
+        else:
+            print("Distribution type not specified. Using unparametric empirical cdf.")
+
+        bounds = ((0, 10), (0, 10)) if bounds is None else bounds
+        self.model = stats.fit(self.dist, self.data, bounds)
+        self.prams = self.model.params
+
+    def cdf(self, x: float, xp: float=None, fp: float=None):
+        if self.dist is None:
+            return np.interp(x, xp, fp)
+        return self.dist.cdf(x, *self.prams)
+
+    def check_fit(self, plot=True):
+        if self.dist is None:
+            return
+        res = stats.goodness_of_fit(self.data, self.dist, *self.prams)
+        print(f"ks_test {res.statistic} p_value {res.pvalue}")
+
+        if plot:
+            self.model.plot()
+            plt.show()
 
 
 def plot_distribution(ratios: np.ndarray, algorithm_name: str):

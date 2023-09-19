@@ -4,6 +4,8 @@ from typing import Optional, Iterator, Sequence
 from priority import PriorityQueue, DoublyPriorityQueue
 from puzzle import PuzzleProblem, State
 
+from distributions import Distribution
+
 
 class SearchAlgorithm:
     def __init__(self, problem: PuzzleProblem):
@@ -216,3 +218,51 @@ class AnytimeWeightedAStar(SearchAlgorithm):
             else:
                 return f"Anytime {self.weight}-A*"
         return f"({self.approximation_error:.2f}, {self.required_confidence:.2f}) Anytime {self.weight}-A*"
+
+
+class ParametricAnytimeWeightedAStar(AnytimeWeightedAStar):
+    def __init__(self, problem: PuzzleProblem, weight: float = 1,
+                 approximation_error: float = 0, required_confidence: float = 1,
+                 ratios: Optional[Sequence[float]] = None, distribution_type: Optional[str]=None):
+        """
+
+        :param problem: Problem to solve
+        :param weight: Weight to apply to the heuristic (f' = g + weight * h)
+        :param approximation_error: Maximum error ratio allowed (a.k.a. epsilon)
+        :param required_confidence: Required confidence (a.k.a. 1 - delta)
+        :param ratios: Ratios of the heuristic values for the initial state h'(s) / h(s)
+        """
+        super().__init__(problem)
+
+        assert 1 + approximation_error <= weight, "Weight must be greater than 1 + approximation error"
+
+        assert 1 <= weight, "Weight must be greater than 1"
+        self.weight = weight
+
+        assert 0 <= approximation_error, "Approximation error must be greater than 0"
+        self.approximation_error = approximation_error
+        self.approximation_ratio = 1 + approximation_error
+
+        assert 0 <= required_confidence <= 1, "Required confidence must be between 0 and 1"
+        self.required_confidence = required_confidence
+
+        if ratios is None:
+            self._variables = None
+            self._results = None
+            # fuck no
+        else:
+
+            ratios = np.array(ratios)
+            assert np.all((0 <= ratios) & (ratios <= 1)), "Ratios must be between 0 and 1"
+
+            density, bins = np.histogram(ratios)
+            unity_density = density / density.sum()
+
+            self._variables = bins[1:]
+            self._results = unity_density.cumsum()
+
+        self.dist = Distribution(ratios, distribution_type)  # I dont know the bounds of paramets but it should work
+        self.max_f_min = 0
+
+    def cumulative_distribution_function(self, input_value: float) -> float:
+        return self.dist.cdf(input_value, self._variables, self._results)
