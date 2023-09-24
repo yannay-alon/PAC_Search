@@ -30,17 +30,18 @@ class State:
             self.depth = float("inf")
         else:
             self.depth = parent.depth + 1
-        self.heuristic_value = None
 
+        self.heuristic_value = None
         self.possible_moves = None
 
     def get_possible_moves(self) -> tuple[list["State"], bool]:
+        has_expanded = False
         if self.possible_moves is None:
-            self.possible_moves = [State(position, self, location)
-                                   for position, location in self.get_possible_positions()]
+            self.possible_moves = [(position, location) for position, location in self.get_possible_positions()]
+            has_expanded = True
 
-            return self.possible_moves, True
-        return self.possible_moves, False
+        return [State(position, self, location) for position, location in self.possible_moves
+                if self.parent is None or not np.array_equal(position, self.parent.position)], has_expanded
 
     def get_possible_positions(self) -> Iterator[tuple[np.ndarray, np.ndarray]]:
         new_locations = self.blank_index + MOVEMENT_DIRECTIONS
@@ -72,7 +73,7 @@ class State:
     def count_misplaced(self, target_position: np.ndarray):
         return np.count_nonzero(self.position.flatten() != target_position)
 
-    def calculate_manhattan_distance(self, target_position: np.ndarray):
+    def calculate_manhattan_distance(self, target_position: np.ndarray) -> float:
         index = self.blank_index[0] * self.size + self.blank_index[1]  # Ravel the index
 
         source_position = self.position[..., NEW_AXIS, NEW_AXIS]
@@ -82,7 +83,7 @@ class State:
         locations[index] = 0
 
         source, target = locations[:, :2], locations[:, 2:]
-        return np.sum(np.abs(source - target))
+        return np.sum(np.abs(source - target)).item()
 
     # def calculate_manhattan_distance(self, target_position: np.ndarray):
     #     index = self.blank_index[0] * self.size + self.blank_index[1]  # Ravel the index
@@ -113,6 +114,7 @@ class State:
         Update costly information from another state (only invariant information)
         """
         self.heuristic_value = other.heuristic_value
+
         self.possible_moves = other.possible_moves
 
     def __eq__(self, other: Union["State", np.ndarray]):

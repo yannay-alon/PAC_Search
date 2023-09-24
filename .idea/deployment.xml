@@ -2,7 +2,35 @@
 <project version="4">
   <component name="PublishConfigData" autoUpload="Always" serverName="yannay.alon@shalit-srv1.iem.technion.ac.il:22 password" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
+      <paths name="Eden-Newton">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="yannay.alon@shalit-srv1.iem.technion.ac.il:22 password">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/yannay.alon/PAC_Search" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="yannay.alon@shalit-srv1.iem.technion.ac.il:22 password (1)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/yannay.alon/PAC_Search" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="yannay.alon@shalit-srv1.iem.technion.ac.il:22 password (2)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/yannay.alon/PAC_Search" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="yannay.alon@shalit-srv1.iem.technion.ac.il:22 password (3)">
         <serverdata>
           <mappings>
             <mapping deploy="/home/yannay.alon/PAC_Search" local="$PROJECT_DIR$" />

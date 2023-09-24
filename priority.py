@@ -2,7 +2,7 @@ import heapq
 import itertools
 from typing import TypeVar, Generic
 
-REMOVED = "<removed-element>"
+REMOVED = "<REMOVED-ELEMENT>"
 
 ELEMENT_TYPE = TypeVar("ELEMENT_TYPE")
 PRIORITY_TYPE = TypeVar("PRIORITY_TYPE")
@@ -103,61 +103,132 @@ class PriorityQueue(Generic[ELEMENT_TYPE, PRIORITY_TYPE]):
         return self.elements[0].item, self.elements[0].priority
 
 
-class DoublyPriorityQueue(Generic[ELEMENT_TYPE, PRIORITY_TYPE]):
-    """
-    Orders elements with two priorities separately
-    """
+# class DoublyPriorityQueue(Generic[ELEMENT_TYPE, PRIORITY_TYPE]):
+#     """
+#     Orders elements with two priorities separately
+#     """
+#
+#     def __init__(self):
+#         self.elements_1: list[Entry] = []
+#         self.elements_2: list[Entry] = []
+#         self.entry_finder: dict[ELEMENT_TYPE, tuple[Entry, Entry]] = {}
+#         self.counter = itertools.count()
+#
+#     def __bool__(self):
+#         return bool(self.entry_finder)
+#
+#     def add(self, element: ELEMENT_TYPE, priority_1: PRIORITY_TYPE, priority_2: PRIORITY_TYPE):
+#         count = next(self.counter)
+#         entry_1 = Entry(priority_1, count, element)
+#         entry_2 = Entry(priority_2, count, element)
+#         self.entry_finder[element] = entry_1, entry_2
+#         heapq.heappush(self.elements_1, entry_1)
+#         heapq.heappush(self.elements_2, entry_2)
+#
+#     def update(self, element: ELEMENT_TYPE, priority_1: PRIORITY_TYPE, priority_2: PRIORITY_TYPE):
+#         self.remove(element)
+#         self.add(element, priority_1, priority_2)
+#
+#     def remove(self, element: ELEMENT_TYPE):
+#         entry_1, entry_2 = self.entry_finder.pop(element)
+#         entry_1[-1] = REMOVED
+#         entry_2[-1] = REMOVED
+#
+#     def pop(self) -> tuple[ELEMENT_TYPE, PRIORITY_TYPE, PRIORITY_TYPE]:
+#         priority_1: PRIORITY_TYPE
+#         priority_2: PRIORITY_TYPE
+#         count: int
+#         item: ELEMENT_TYPE
+#
+#         while self.elements_1:
+#             priority_1, count, item = heapq.heappop(self.elements_1)
+#             if item is not REMOVED:
+#                 entry_2 = self.entry_finder[item][1]
+#                 entry_2[-1] = REMOVED
+#                 priority_2 = entry_2.priority
+#                 del self.entry_finder[item]
+#                 return item, priority_1, priority_2
+#         raise KeyError("Pop from an empty priority queue")
+#
+#     def __contains__(self, item: ELEMENT_TYPE):
+#         return item in self.entry_finder
+#
+#     def get_element(self, item: ELEMENT_TYPE) -> ELEMENT_TYPE:
+#         return self.entry_finder[item][0].item
+#
+#     def get_smallest(self, priority_key: int) -> tuple[ELEMENT_TYPE, PRIORITY_TYPE]:
+#         elements = self.elements_1 if priority_key == 0 else self.elements_2
+#         while elements[0].item is REMOVED:
+#             heapq.heappop(elements)
+#         return elements[0].item, elements[0].priority
 
+
+class DoublyPriorityQueue(Generic[ELEMENT_TYPE, PRIORITY_TYPE]):
     def __init__(self):
-        self.elements_1: list[Entry] = []
-        self.elements_2: list[Entry] = []
-        self.entry_finder: dict[ELEMENT_TYPE, tuple[Entry, Entry]] = {}
-        self.counter = itertools.count()
+        self.queue_0 = PriorityQueue()
+        self.queue_1 = PriorityQueue()
 
     def __bool__(self):
-        return bool(self.entry_finder)
+        return bool(self.queue_0)
 
     def add(self, element: ELEMENT_TYPE, priority_1: PRIORITY_TYPE, priority_2: PRIORITY_TYPE):
-        count = next(self.counter)
-        entry_1 = Entry(priority_1, count, element)
-        entry_2 = Entry(priority_2, count, element)
-        self.entry_finder[element] = entry_1, entry_2
-        heapq.heappush(self.elements_1, entry_1)
-        heapq.heappush(self.elements_2, entry_2)
+        self.queue_0.add(element, priority_1)
+        self.queue_1.add(element, priority_2)
 
     def update(self, element: ELEMENT_TYPE, priority_1: PRIORITY_TYPE, priority_2: PRIORITY_TYPE):
-        self.remove(element)
-        self.add(element, priority_1, priority_2)
+        self.queue_0.update(element, priority_1)
+        self.queue_1.update(element, priority_2)
 
-    def remove(self, item):
-        entry_1, entry_2 = self.entry_finder.pop(item)
-        entry_1[-1] = REMOVED
-        entry_2[-1] = REMOVED
+    def pop(self, priority_key: int = 0) -> tuple[ELEMENT_TYPE, PRIORITY_TYPE, PRIORITY_TYPE]:
+        if priority_key == 0:
+            element, priority_0 = self.queue_0.pop()
+            priority_1 = self.queue_1.entry_finder[element].priority
+            self.queue_1.remove(element)
+            return element, priority_0, priority_1
 
-    def pop(self) -> tuple[ELEMENT_TYPE, PRIORITY_TYPE, PRIORITY_TYPE]:
-        priority_1: PRIORITY_TYPE
-        priority_2: PRIORITY_TYPE
-        count: int
-        item: ELEMENT_TYPE
+        element, priority_1 = self.queue_1.pop()
 
-        while self.elements_1:
-            priority_1, count, item = heapq.heappop(self.elements_1)
-            if item is not REMOVED:
-                entry_2 = self.entry_finder[item][1]
-                entry_2[-1] = REMOVED
-                priority_2 = self.entry_finder[item][1].priority
-                del self.entry_finder[item]
-                return item, priority_1, priority_2
-        raise KeyError("Pop from an empty priority queue")
+        priority_0 = self.queue_0.entry_finder[element].priority
+        self.queue_0.remove(element)
+        return element, priority_0, priority_1
 
-    def __contains__(self, item: ELEMENT_TYPE):
-        return item in self.entry_finder
+    def __contains__(self, element: ELEMENT_TYPE):
+        return element in self.queue_0
 
-    def get_element(self, item: ELEMENT_TYPE) -> ELEMENT_TYPE:
-        return self.entry_finder[item][0].item
+    def get_element(self, element: ELEMENT_TYPE) -> ELEMENT_TYPE:
+        return self.queue_0.get_element(element)
 
-    def get_smallest(self, priority_key: int) -> tuple[ELEMENT_TYPE, PRIORITY_TYPE]:
-        elements = self.elements_1 if priority_key == 0 else self.elements_2
-        while elements[0].item is REMOVED:
-            heapq.heappop(elements)
-        return elements[0].item, elements[0].priority
+    def get_smallest(self, priority_key: int = 0) -> tuple[ELEMENT_TYPE, PRIORITY_TYPE]:
+        if priority_key == 0:
+            return self.queue_0.get_smallest()
+        return self.queue_1.get_smallest()
+
+
+def main():
+    pq = DoublyPriorityQueue()
+
+    pq.add("a", 1, 2)
+    pq.add("b", 2, 1)
+    pq.add("c", 3, 1)
+    pq.add("d", 1, 3)
+
+    print(pq.pop(0))
+    print(pq.get_smallest(1))
+    pq.add("e", 1, 1)
+
+    print(pq.get_smallest(0))
+    print(pq.get_smallest(1))
+    print(pq.pop(1))
+
+    pq.update("d", 3, 2)
+    print(pq.get_smallest(0))
+
+    print([e.priority for e in pq.queue_0.elements])
+    print([e.priority for e in pq.queue_1.elements])
+
+    heapq.heapify(pq.queue_1.elements)
+    print([e.priority for e in pq.queue_1.elements])
+
+
+if __name__ == '__main__':
+    main()
