@@ -11,7 +11,6 @@ supported_distribution_types = {
     "uniform": stats.uniform,
     "cauchy": stats.cauchy,
     "alpha": stats.alpha,
-    "burr12": stats.burr12,
 }
 
 

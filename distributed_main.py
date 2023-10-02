@@ -21,7 +21,7 @@ def results_handler(file_path: str, candidate_algorithms: list[SearchAlgorithm],
     task_status[:] = "\033[41m\033[30m Pending \033[39m\033[49m"
 
     results = {}
-    for column in ["run_times", "expanded_nodes_counts", "solution_lengths"]:
+    for column in ["run_times", "expanded_nodes_counts", "solution_lengths", "max_f_min_history"]:
         try:
             data_frame = pd.read_csv(f"{file_path}/{column}.csv", header=0, index_col="problem_index")
         except FileNotFoundError:
@@ -52,7 +52,7 @@ def results_handler(file_path: str, candidate_algorithms: list[SearchAlgorithm],
         if problem_index is None:
             break
 
-        run_time, expanded_nodes_count, solution_length = algorithm_result
+        run_time, expanded_nodes_count, solution_length, max_f_min_history = algorithm_result
 
         if problem_index not in results["solution_lengths"].index:
             position = np.array(problem_index.split(",")).astype(int)
@@ -65,6 +65,7 @@ def results_handler(file_path: str, candidate_algorithms: list[SearchAlgorithm],
         results["run_times"].at[problem_index, algorithm_name] = run_time
         results["expanded_nodes_counts"].at[problem_index, algorithm_name] = expanded_nodes_count
         results["solution_lengths"].at[problem_index, algorithm_name] = solution_length
+        results["max_f_min_history"].at[problem_index, algorithm_name] = str(max_f_min_history)
 
         for key, data_frame in results.items():
             data_frame.to_csv(f"{file_path}/{key}.csv", index=True)
@@ -77,11 +78,12 @@ def problem_solver(index: int, position: np.ndarray, algorithm: SearchAlgorithm,
 
     start_time = time.perf_counter()
     solution = None
-    for solution in algorithm.search():
+    max_f_min_history = []
+    for solution, stop_reason, max_f_min_history in algorithm.search():
         break  # Stop after the first solution
     end_time = time.perf_counter()
 
-    algorithm_result = (end_time - start_time, algorithm.problem.expanded_nodes, len(solution) - 1)
+    algorithm_result = (end_time - start_time, algorithm.problem.expanded_nodes, len(solution) - 1, max_f_min_history)
 
     queue.put((TASK_FINISH, (index, algorithm.problem.index), str(algorithm), algorithm_result))
 
@@ -89,8 +91,8 @@ def problem_solver(index: int, position: np.ndarray, algorithm: SearchAlgorithm,
 def main():
     max_processes = 40
 
-    problem_size = 4
-    repetitions = 40
+    problem_size = 3
+    repetitions = 900
 
     problem = PuzzleProblem(size=problem_size)
 
@@ -113,28 +115,26 @@ def main():
 
     num_processes = min(multiprocess.cpu_count() + 1, len(candidate_algorithms) * repetitions + 1, max_processes)
     with multiprocess.Pool(num_processes) as pool:
-        try:
-            pool.apply_async(results_handler,
-                             args=(folder, candidate_algorithms, repetitions, queue))
+        pool.apply_async(results_handler,
+                         args=(folder, candidate_algorithms, repetitions, queue))
 
-            jobs = []
-            for i in range(repetitions):
-                print(f"\nStart of problem {i + 1}/{repetitions}")
-                position = State.get_random_state(problem_size, exclude_indices=existing_indices).position
+        jobs = []
+        for i in range(repetitions):
+            print(f"\nStart of problem {i + 1}/{repetitions}")
+            position = State.get_random_state(problem_size, exclude_indices=existing_indices).position
 
-                for algorithm in candidate_algorithms:
-                    job = pool.apply_async(problem_solver, args=(i, position, algorithm, queue))
-                    jobs.append(job)
+            for algorithm in candidate_algorithms:
+                job = pool.apply_async(problem_solver, args=(i, position, algorithm, queue))
+                jobs.append(job)
 
-            for job in jobs:
-                job.get()
+        for job in jobs:
+            job.get()
 
-            queue.put((None, (None, None), None, None))
-        except KeyboardInterrupt:
-            print("\nStop received, waits for queue", color="red")
-        finally:
-            pool.close()
-            pool.join()
+        while not queue.empty():
+            time.sleep(0.1)
+        queue.put((None, (None, None), None, None))
+
+    pool.join()
 
 
 if __name__ == '__main__':
